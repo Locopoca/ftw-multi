@@ -7,37 +7,43 @@ app.use(express.static('public'));
 
 const players = {};
 const platforms = [];
-const PLATFORM_SPACING = 120;
+let basePlatformSpacing = 120; // Fixed spacing
 let highestFloor = 15;
+const MAX_PLAYERS = 8;
 
 function generatePlatforms(upToFloor) {
   while (platforms.length < upToFloor) {
     const floor = platforms.length;
+    const difficultyTier = Math.min(Math.floor(floor / 20), 5);
+    const spacing = basePlatformSpacing; // No tier increase—fixed 120px
+    const speedMin = 50 + difficultyTier * 25;
+    const speedMax = 150 + difficultyTier * 25;
+
     let x, width, movementType, speed;
     if (floor % 20 === 0) {
-      x = 400; // Full-width static
+      x = 400;
       width = 800;
       movementType = 'none';
       speed = 0;
-    } else if (floor % 10 === 0) { // Bonus platform
-      x = Math.floor(Math.random() * (600 - 100 + 1)) + 100;
+    } else if (floor % 10 === 0) {
+      x = Math.floor(Math.random() * (700 - 50 + 1)) + 50; // Wider range
       width = 200;
       movementType = 'none';
       speed = 0;
     } else {
-      x = 100; // Start at left edge
+      x = 100;
       width = 200;
-      movementType = 'horizontal'; // All move across screen
-      speed = Math.random() * 100 + 50; // 50-150px/s
+      movementType = 'horizontal';
+      speed = Math.random() * (speedMax - speedMin) + speedMin;
     }
     platforms.push({
       x: x,
-      y: 600 - floor * PLATFORM_SPACING,
+      y: 600 - floor * spacing,
       width: width,
       movementType: movementType,
       speed: speed,
       baseX: x,
-      baseY: 600 - floor * PLATFORM_SPACING,
+      baseY: 600 - floor * spacing,
       isBonus: floor % 10 === 0,
     });
   }
@@ -46,12 +52,18 @@ function generatePlatforms(upToFloor) {
 generatePlatforms(highestFloor);
 
 io.on('connection', (socket) => {
+  if (Object.keys(players).length >= MAX_PLAYERS) {
+    socket.emit('serverFull', 'Server limit reached (8 players). Try again later!');
+    socket.disconnect(true);
+    return;
+  }
+
   console.log('A user connected:', socket.id);
 
   players[socket.id] = {
     x: 400,
-    y: 568,
-    score: 0, // Track score per player
+    y: 550,
+    score: 0,
   };
 
   socket.emit('currentPlayers', players);
@@ -63,15 +75,18 @@ io.on('connection', (socket) => {
     if (players[socket.id]) {
       players[socket.id].x = movementData.x;
       players[socket.id].y = movementData.y;
-      players[socket.id].score = movementData.score || 0; // Update score
+      players[socket.id].score = movementData.score || 0;
       socket.broadcast.emit('playerMoved', { id: socket.id, x: movementData.x, y: movementData.y, score: movementData.score });
 
-      const playerFloor = Math.floor((600 - movementData.y) / PLATFORM_SPACING);
+      const playerFloor = Math.floor((600 - movementData.y) / basePlatformSpacing);
       if (playerFloor > highestFloor - 5) {
-        highestFloor += 5;
+        highestFloor = playerFloor + 5; // Align with player progress
         generatePlatforms(highestFloor);
         io.emit('mapUpdate', platforms.slice(-5));
       }
+
+      const difficultyTier = Math.min(Math.floor(movementData.score / 20), 5);
+      io.emit('difficultyUpdate', { tier: difficultyTier });
     }
   });
 
@@ -82,20 +97,18 @@ io.on('connection', (socket) => {
   });
 });
 
-// Update moving platforms
 setInterval(() => {
   platforms.forEach((platform) => {
     if (platform.movementType === 'horizontal') {
-      platform.x += platform.speed * (1 / 30); // Move based on speed
-      if (platform.x > 700) platform.speed = -platform.speed; // Reverse at right edge (800 - 200/2)
-      if (platform.x < 100) platform.speed = -platform.speed; // Reverse at left edge
+      platform.x += platform.speed * (1 / 30);
+      if (platform.x > 700) platform.speed = -platform.speed;
+      if (platform.x < 100) platform.speed = -platform.speed;
     }
   });
   io.emit('mapUpdate', platforms);
-}, 1000 / 30); // 30 FPS
+}, 1000 / 30);
 
 const PORT = process.env.PORT || 8081;
-
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
