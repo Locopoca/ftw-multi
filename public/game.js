@@ -206,7 +206,6 @@ function create() {
         if (!existing) {
           const platform = this.add.rectangle(platformData.x, platformData.y, platformData.width, 32, platformData.isBonus ? 0xFFA500 : 0x000000);
           this.physics.add.existing(platform, true);
-
           platforms.add(platform);
           platform.body.checkCollision.down = false;
           platform.isBonus = platformData.isBonus;
