@@ -1,32 +1,76 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>Icy Tower Multiplayer</title>
-  <style>
-    body { margin: 0; padding: 0; background: #000; font-family: Arial; color: #fff; }
-    #game-container { position: relative; }
-    #controls { position: absolute; top: 10px; left: 820px; padding: 10px; background: rgba(0, 0, 0, 0.7); }
-    #controls label { display: block; margin: 5px 0; }
-    #controls span { display: inline-block; width: 60px; text-align: right; }
-    #scoreboard { position: absolute; top: 200px; left: 820px; padding: 10px; background: rgba(0, 0, 0, 0.7); }
-    #scoreboard div { margin: 5px 0; }
-  </style>
-</head>
-<body>
-  <div id="game-container"></div>
-  <div id="controls">
-    <label>Jump Velocity: <input type="range" id="jumpVelocity" min="-1000" max="-300" value="-600" step="10"> <span id="jumpValue">-600</span></label>
-    <label>Max Velocity X: <input type="range" id="maxVelocityX" min="200" max="800" value="450" step="10"> <span id="maxVelocityXValue">450</span></label>
-    <label>Acceleration X: <input type="range" id="accelerationX" min="50" max="200" value="100" step="5"> <span id="accelerationXValue">100</span></label>
-    <label>Deceleration: <input type="range" id="deceleration" min="0.85" max="0.98" value="0.95" step="0.01"> <span id="decelerationValue">0.95</span></label>
-    <label>Gravity: <input type="range" id="gravity" min="500" max="1200" value="700" step="50"> <span id="gravityValue">700</span></label>
-  </div>
-  <div id="scoreboard">
-    <h3>Scoreboard</h3>
-    <div id="scores"></div>
-  </div>
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-  <script src="game.js"></script>
-</body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sky is the limit</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #000;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #gameContainer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 800px;
+        height: 600px;
+        display: block;
+        visibility: visible;
+      }
+      #lobby {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        color: white;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 10;
+        visibility: visible;
+      }
+      #waiting {
+        display: none;
+        margin-top: 10px;
+        visibility: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="lobby"
+      style="
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        color: white;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 20px;
+        border-radius: 10px;
+      "
+    >
+      <h2>Select Game Mode</h2>
+      <button id="solo">Solo</button>
+      <button id="duo">Duo</button>
+      <button id="quad">Quad</button>
+      <button id="octet">Octet</button>
+      <div id="waiting" style="display: none; margin-top: 10px;">
+        Waiting for players...
+      </div>
+    </div>
+    <div id="gameContainer"></div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+    <script type="module" src="game.js"></script>
+  </body>
 </html>
