@@ -1,5 +1,7 @@
 export let scoreBoard = [];
 export let gameOverText;
+export let bonusTimerText; //
+export let gameTimerText; // In ui.js at the top
 
 export function initializeUI() {
   gameOverText = this.add
@@ -14,10 +16,23 @@ export function initializeUI() {
   gameOverText.setVisible(false);
   console.log("Game over text added, initially hidden");
 
+  gameTimerText = null; // Initialize it as null, set in gameScene.js
+  // Initialize bonus countdown timer
+  bonusTimerText = this.add
+    .text(780, 20, "Time: 30.0", {
+      fontSize: "20px",
+      fill: "#00ff00",
+      stroke: "#000000",
+      strokeThickness: 2,
+      align: "right",
+    })
+    .setOrigin(1, 0) // Anchor to top-right
+    .setScrollFactor(0)
+    .setDepth(10);
+  console.log("Bonus timer text added in upper-right corner");
+
   scoreBoard = [];
   console.log("Scoreboard initialized");
-
-  //addFlickerEffect.call(this);
 }
 
 export function updateScoreboard(scene, playerId, score, isLocalPlayer = false) {
@@ -29,15 +44,15 @@ export function updateScoreboard(scene, playerId, score, isLocalPlayer = false) 
       id: playerId,
       text: scene.add
         .text(20, yPosition, "", {
-          fontSize: "20px",
+          fontSize: "16px",
           fill: isLocalPlayer ? "#00ff00" : "#ffffff",
           stroke: "#000000",
-          strokeThickness: 2,
+          strokeThickness: 3,
           shadow: {
             offsetX: 2,
             offsetY: 2,
             color: "#ff00ff",
-            blur: 2,
+            blur: 1,
             stroke: true,
             fill: true,
           },

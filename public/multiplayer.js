@@ -20,11 +20,13 @@ export function initializeMultiplayer(scene) {
   socket.on("gameStart", (data) => {
     console.log("Game started with map data:", data.mapData);
     hideLobby();
-    scene.physics.world.resume();
     setMapLoaded(true);
 
+    // Clear existing platforms
     platforms.clear(true, true);
-    console.log("Clearing platforms, new count:", platforms.count);
+    console.log("Clearing platforms, new count:", platforms.countActive());
+
+    // Create platforms from mapData
     data.mapData.forEach((platformData) => {
       if (
         platformData.id.toString().includes("_left") ||
@@ -43,6 +45,7 @@ export function initializeMultiplayer(scene) {
         platform.isBonus = platformData.isBonus;
         platform.isSpecialBonus = platformData.isSpecialBonus;
         platform.floor = platformData.floor;
+        platform.body.checkCollision.down = true; // Solid from below
         platforms.add(platform);
         console.log(
           `Platform segment added at (${platform.x}, ${platform.y}), visible:`,
@@ -62,6 +65,7 @@ export function initializeMultiplayer(scene) {
         platform.isBonus = platformData.isBonus;
         platform.isSpecialBonus = platformData.isSpecialBonus;
         platform.floor = platformData.floor;
+        platform.body.checkCollision.down = true; // Solid from below
         platforms.add(platform);
         console.log(
           `Platform added at (${platform.x}, ${platform.y}), visible:`,
@@ -70,12 +74,41 @@ export function initializeMultiplayer(scene) {
       }
     });
 
+    // Find the lowest platform to position the player on it
+    let startingPlatform = null;
+    let highestY = -Infinity;
+    platforms.getChildren().forEach((platform) => {
+      if (platform.y > highestY) {
+        highestY = platform.y;
+        startingPlatform = platform;
+      }
+    });
+
     const playerData = data.players[socket.id];
     if (playerData) {
-      player.setPosition(playerData.x, playerData.y);
+      let safeX = playerData.x;
+      let safeY = 550; // Default safe Y above bottomFloor
+
+      if (startingPlatform) {
+        // Position player on top of the starting platform
+        safeX = startingPlatform.x; // Center on platform
+        safeY = startingPlatform.y - (startingPlatform.height || 32) / 2 - 20; // Just above platform (accounting for player height)
+        console.log(
+          `Starting platform found at (${startingPlatform.x}, ${startingPlatform.y}), positioning player at (${safeX}, ${safeY})`
+        );
+      } else {
+        console.warn("No starting platform found, using default position");
+      }
+
+      player.setPosition(safeX, safeY);
       console.log(`Player positioned at (${player.x}, ${player.y})`);
+    } else {
+      // Fallback if no playerData
+      player.setPosition(400, 550);
+      console.log("No player data from server, defaulting to (400, 550)");
     }
 
+    // Clear and add other players
     otherPlayers.length = 0;
     Object.keys(data.players).forEach((id) => {
       if (id !== socket.id) {
@@ -83,6 +116,10 @@ export function initializeMultiplayer(scene) {
         console.log(`Other player ${id} added`);
       }
     });
+
+    // Resume physics AFTER platforms and player are set
+    scene.physics.world.resume();
+    console.log("Physics world resumed after setup");
   });
 
   socket.on("mapUpdate", (serverPlatforms) => {
@@ -117,6 +154,7 @@ export function initializeMultiplayer(scene) {
           platform.isBonus = platformData.isBonus;
           platform.isSpecialBonus = platformData.isSpecialBonus;
           platform.floor = platformData.floor;
+          platform.body.checkCollision.down = true;
           platforms.add(platform);
           console.log(
             `New platform segment added at (${platform.x}, ${platform.y}), visible:`,
@@ -136,6 +174,7 @@ export function initializeMultiplayer(scene) {
           platform.isBonus = platformData.isBonus;
           platform.isSpecialBonus = platformData.isSpecialBonus;
           platform.floor = platformData.floor;
+          platform.body.checkCollision.down = true;
           platforms.add(platform);
           console.log(
             `New platform added at (${platform.x}, ${platform.y}), visible:`,

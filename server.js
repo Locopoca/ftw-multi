@@ -61,27 +61,66 @@ class Room {
 
   generatePlatforms(upToFloor) {
     const basePlatformSpacing = 120;
+    const minVerticalSpacing = 30;
+    let lastY = 600;
+  
     while (this.platforms.length < upToFloor) {
       const floor = this.platforms.length;
       const difficultyTier = Math.min(Math.floor(floor / 20), 4);
-      const spacing = Math.min(basePlatformSpacing + difficultyTier * 5, 150);
+      const spacing = basePlatformSpacing;
       const speedMin = 50 + difficultyTier * 50;
       const speedMax = 300 + difficultyTier * 50;
       const bonusInterval = Math.floor(Math.random() * (12 - 8 + 1)) + 8;
-
+  
       let x, width, height, movementType, speed, isStatic, isBonus, isSpecialBonus;
       const isNarrow = Math.random() < 0.1;
       width = isNarrow ? 50 : Math.floor(Math.random() * (300 - 100 + 1)) + 100;
       height = Math.floor(Math.random() * (36 - 28 + 1)) + 28;
-
-      if (floor > 0 && floor % 3 === 0) {
-        const prevPlatform = this.platforms[floor - 1];
-        x = prevPlatform.x + Math.floor(Math.random() * 100 - 50);
-        x = Math.max(50, Math.min(x, 750 - width));
-      } else {
-        x = Math.floor(Math.random() * (750 - 50 + 1)) + 50;
+  
+      // Adjust spacing for floor after split (e.g., floor 21, 41)
+      let intendedY = 600 - floor * spacing;
+      if (floor > 0 && this.platforms[floor - 1].id.toString().includes("_left")) {
+        intendedY = this.platforms[floor - 1].y - 80; // Reduced spacing after split
+        console.log(`Reduced spacing to 80px for floor ${floor} after split`);
       }
-
+  
+      if (lastY - intendedY < minVerticalSpacing) {
+        intendedY = lastY - minVerticalSpacing;
+      }
+      lastY = intendedY;
+  
+      if (floor > 0) {
+        const prevPlatform = this.platforms[floor - 1];
+        const prevLeft = prevPlatform.x - prevPlatform.width / 2;
+        const prevRight = prevPlatform.x + prevPlatform.width / 2;
+  
+        let attempts = 0;
+        const maxAttempts = 10;
+        do {
+          if (floor % 3 === 0) {
+            x = prevPlatform.x + Math.floor(Math.random() * 100 - 50);
+            x = Math.max(60 + width / 2, Math.min(x, 740 - width / 2));
+          } else {
+            x = Math.floor(Math.random() * (680) + 60 + width / 2);
+          }
+          attempts++;
+        } while (
+          attempts < maxAttempts &&
+          Math.abs(prevPlatform.y - intendedY) < minVerticalSpacing &&
+          (x + width / 2 > prevLeft && x - width / 2 < prevRight)
+        );
+  
+        if (attempts >= maxAttempts) {
+          if (prevPlatform.x < 400) {
+            x = Math.max(400, 740 - width / 2);
+          } else {
+            x = Math.min(400, 60 + width / 2);
+          }
+        }
+      } else {
+        x = Math.floor(Math.random() * (680) + 60 + width / 2);
+      }
+  
       if (floor === 0) {
         x = 400;
         width = 200;
@@ -100,59 +139,66 @@ class Room {
         isStatic = true;
         isBonus = false;
         isSpecialBonus = false;
-
-        // Split the full-width platform into two segments with a 120px gap at a random position
+  
         const gapWidth = 120;
-        const minGapX = 60 + gapWidth / 2; // Minimum x position for the gap center (60px from left edge)
-        const maxGapX = 740 - gapWidth / 2; // Maximum x position for the gap center (60px from right edge)
-        const gapCenterX = Math.random() * (maxGapX - minGapX) + minGapX; // Random gap center between 90 and 710
-
-        const leftSegmentWidth = gapCenterX - gapWidth / 2 - 60; // Width from left edge (x=60) to start of gap
-        const rightSegmentWidth = 740 - (gapCenterX + gapWidth / 2); // Width from end of gap to right edge (x=740)
-
-        // Left segment
+        const minGapX = 60 + gapWidth / 2;
+        const maxGapX = 740 - gapWidth / 2;
+        const gapCenterX = Math.random() * (maxGapX - minGapX) + minGapX;
+  
+        const leftSegmentWidth = gapCenterX - gapWidth / 2 - 60;
+        const rightSegmentWidth = 740 - (gapCenterX + gapWidth / 2);
+  
         this.platforms.push({
           id: `${floor}_left`,
-          x: 60 + leftSegmentWidth / 2, // Center of the left segment
-          y: 600 - floor * spacing,
+          x: 60 + leftSegmentWidth / 2,
+          y: intendedY,
           width: leftSegmentWidth,
           height,
           movementType,
           speed,
           baseX: 60 + leftSegmentWidth / 2,
-          baseY: 600 - floor * spacing,
+          baseY: intendedY,
           isBonus,
           isSpecialBonus,
           isStatic,
           floor,
         });
-        console.log(
-          `Generating left platform segment at floor ${floor}, x: ${
-            60 + leftSegmentWidth / 2
-          }, y: ${600 - floor * spacing}, width: ${leftSegmentWidth}, isBonus: ${isBonus}`
-        );
-
-        // Right segment
+  
         this.platforms.push({
           id: `${floor}_right`,
-          x: 740 - rightSegmentWidth / 2, // Center of the right segment
-          y: 600 - floor * spacing,
+          x: 740 - rightSegmentWidth / 2,
+          y: intendedY,
           width: rightSegmentWidth,
           height,
           movementType,
           speed,
           baseX: 740 - rightSegmentWidth / 2,
-          baseY: 600 - floor * spacing,
+          baseY: intendedY,
           isBonus,
           isSpecialBonus,
           isStatic,
           floor,
         });
-        console.log(
-          `Generating right platform segment at floor ${floor}, x: ${
-            740 - rightSegmentWidth / 2
-          }, y: ${600 - floor * spacing}, width: ${rightSegmentWidth}, isBonus: ${isBonus}`
-        );
+  
+        // Add a bonus platform above the split
+        const bonusX = gapCenterX; // Center it in the gap
+        const bonusY = intendedY - 60; // 60px above split, jumpable from either side
+        this.platforms.push({
+          id: `${floor}_bonus`,
+          x: bonusX,
+          y: bonusY,
+          width: 80, // Small enough to fit in gap
+          height: 32,
+          movementType: "none",
+          speed: 0,
+          baseX: bonusX,
+          baseY: bonusY,
+          isBonus: true,
+          isSpecialBonus: false,
+          isStatic: true,
+          floor,
+        });
+        console.log(`Added bonus platform at (${bonusX}, ${bonusY}) for split floor ${floor}`);
         continue;
       } else {
         isBonus =
@@ -163,22 +209,17 @@ class Room {
         isStatic = false;
         if (isNarrow) width = 50;
       }
-
-      console.log(
-        `Generating platform at floor ${floor}, x: ${x}, y: ${
-          600 - floor * spacing
-        }, isBonus: ${isBonus}`
-      );
+  
       this.platforms.push({
         id: floor,
         x,
-        y: 600 - floor * spacing,
+        y: intendedY,
         width,
         height,
         movementType,
         speed,
         baseX: x,
-        baseY: 600 - floor * spacing,
+        baseY: intendedY,
         isBonus,
         isSpecialBonus,
         isStatic,
